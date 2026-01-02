@@ -14,5 +14,10 @@ export class AdminUpdateUserDto {
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(255)
+    address?: string;
 }
 

@@ -5,4 +5,9 @@ export class UpdateUserDto {
     @IsOptional()
     @MaxLength(100)
     fullName?: string;
+
+    @IsString()
+    @IsOptional()
+    @MaxLength(255)
+    address?: string;
 }

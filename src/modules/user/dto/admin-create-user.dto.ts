@@ -23,5 +23,9 @@ export class AdminCreateUserDto {
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
+
+    @IsOptional()
+    @IsString()
+    address?: string;
 }
 
