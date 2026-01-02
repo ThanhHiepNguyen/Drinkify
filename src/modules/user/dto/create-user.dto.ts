@@ -3,5 +3,6 @@ export class CreateUserDto {
     passwordHash: string;
     fullName?: string;
     phone?: string;
+    address?: string;
 }
 

@@ -1,5 +1,4 @@
 
-
 generator client {
   provider        = "prisma-client"
   output          = "../src/generated/prisma"
@@ -7,7 +6,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-
 }
 
 enum UserRole {
@@ -16,12 +14,35 @@ enum UserRole {
   STAFF
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  COD
+}
+
 model User {
   userId               String    @id @default(uuid())
   email                String    @unique
   phone                String?   @unique
   passwordHash         String
   fullName             String?
+  address              String?
   role                 UserRole  @default(CUSTOMER)
   isActive             Boolean   @default(true)
   createdAt            DateTime  @default(now())
@@ -30,4 +51,171 @@ model User {
   resetPasswordToken   String?   @unique
   resetPasswordExpires DateTime?
 
+  carts                Cart[]
+  orders               Order[]
+  reviews              Review[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Category {
+  categoryId  String    @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@index([name])
+}
+
+model Product {
+  productId   String    @id @default(uuid())
+  name        String
+  description String
+  categoryId  String
+  thumbnail   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  category    Category  @relation(fields: [categoryId], references: [categoryId], onDelete: Cascade)
+  options     ProductOption[]
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+  reviews     Review[]
+
+  @@index([categoryId])
+  @@index([name])
+}
+
+model ProductOption {
+  optionId        String   @id @default(uuid())
+  productId       String
+  color           String?
+  version         String?
+  price           Float
+  salePrice       Float?
+  discountPercent Float?
+  stockQuantity   Int      @default(0)
+  sku             String?  @unique
+  image           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product       Product    @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  orderItems    OrderItem[]
+  cartItems     CartItem[]
+
+  @@unique([productId, color, version])
+  @@index([productId])
+  @@index([sku])
+}
+
+model Cart {
+  cartId    String     @id @default(uuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user      User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  items     CartItem[]
+
+  @@index([userId])
+}
+
+model CartItem {
+  cartItemId  String         @id @default(uuid())
+  cartId      String
+  productId   String
+  optionId    String?
+  quantity    Int
+  savedPrice  Float
+  addedAt     DateTime       @default(now())
+
+  cart        Cart           @relation(fields: [cartId], references: [cartId], onDelete: Cascade)
+  product     Product        @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  option      ProductOption? @relation(fields: [optionId], references: [optionId], onDelete: SetNull)
+
+  @@index([cartId])
+  @@index([productId])
+  @@index([optionId])
+  @@unique([cartId, productId, optionId])
+}
+
+model Order {
+  orderId          String        @id @default(uuid())
+  userId           String
+  totalPrice       Float
+  status           OrderStatus   @default(PENDING)
+  shippingAddress  String
+  paymentMethod    PaymentMethod
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user             User          @relation(fields: [userId], references: [userId], onDelete: Restrict)
+  items            OrderItem[]
+  payments         Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  orderItemId   String         @id @default(uuid())
+  orderId       String
+  productId     String
+  optionId      String?
+  quantity      Int
+  unitPrice     Float
+  optionPrice   Float?
+  lineTotal     Float
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  order         Order          @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  product       Product        @relation(fields: [productId], references: [productId], onDelete: Restrict)
+  option        ProductOption? @relation(fields: [optionId], references: [optionId], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([optionId])
+}
+
+model Payment {
+  paymentId        String        @id @default(uuid())
+  orderId          String
+  paymentStatus    PaymentStatus @default(UNPAID)
+  amount           Float
+  transactionDate  DateTime      @default(now())
+  paymentMethod    PaymentMethod
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  order            Order         @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([paymentStatus])
+  @@index([transactionDate])
+}
+
+model Review {
+  reviewId  String    @id @default(uuid())
+  productId String
+  userId    String
+  rating    Int
+  comment   String?
+  reply     String?
+  repliedBy String?
+  repliedAt DateTime?
+  createdAt DateTime  @default(now())
+  
+  product   Product   @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([userId])
+  @@index([rating])
+  @@unique([productId, userId])
 }
