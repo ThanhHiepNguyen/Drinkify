@@ -27,6 +27,10 @@ export default tseslint.config(
   {
     rules: {
       'prettier/prettier': 0,
+      // Tắt cảnh báo khi sử dụng kiểu 'any'
+      '@typescript-eslint/no-explicit-any': 'off', 
+      
+      // Các luật bạn đã tắt trước đó
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
