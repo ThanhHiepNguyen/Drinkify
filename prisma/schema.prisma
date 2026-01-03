@@ -61,13 +61,15 @@ model User {
 
 model Category {
   categoryId  String    @id @default(uuid())
-  name        String
+  name        String    @unique
   description String?
+  isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   products    Product[]
 
   @@index([name])
+  @@index([isActive])
 }
 
 model Product {
@@ -78,7 +80,7 @@ model Product {
   thumbnail   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  category    Category  @relation(fields: [categoryId], references: [categoryId], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [categoryId], onDelete: Restrict)
   options     ProductOption[]
   orderItems  OrderItem[]
   cartItems   CartItem[]
@@ -91,35 +93,42 @@ model Product {
 model ProductOption {
   optionId        String   @id @default(uuid())
   productId       String
-  color           String?
-  version         String?
+
+  size            String?  
+  material        String?  
+  threadType      String?  
+  headType        String?  
+
   price           Float
   salePrice       Float?
   discountPercent Float?
+
   stockQuantity   Int      @default(0)
-  sku             String?  @unique
+  unit            String   @default("Cái") 
+
   image           String?
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  product       Product    @relation(fields: [productId], references: [productId], onDelete: Cascade)
-  orderItems    OrderItem[]
-  cartItems     CartItem[]
+  product         Product    @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
 
-  @@unique([productId, color, version])
+
+  @@unique([productId, size, material, headType])
   @@index([productId])
-  @@index([sku])
 }
 
 model Cart {
-  cartId    String     @id @default(uuid())
-  userId    String     @unique
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  cartId     String     @id @default(uuid())
+  userId     String     @unique
+  totalPrice Float      @default(0)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
-  user      User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  items     CartItem[]
+  user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  items      CartItem[]
 
   @@index([userId])
 }
@@ -129,8 +138,9 @@ model CartItem {
   cartId      String
   productId   String
   optionId    String?
-  quantity    Int
+  quantity    Int            @default(1)
   savedPrice  Float
+  note        String?
   addedAt     DateTime       @default(now())
 
   cart        Cart           @relation(fields: [cartId], references: [cartId], onDelete: Cascade)
