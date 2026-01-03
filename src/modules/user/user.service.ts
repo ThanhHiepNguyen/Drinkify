@@ -82,6 +82,28 @@ export class UserService {
     return user;
   }
 
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { userId },
+      select: {
+        userId: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        address: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User không tồn tại');
+    }
+
+    return user;
+  }
+
   async updateProfile(userId: string, data: UpdateUserDto) {
     const existingUser = await this.prisma.user.findUnique({
       where: { userId },

@@ -17,17 +17,10 @@ export class UserController {
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
-  getProfile(@Request() req: any) {
+  async getProfile(@Request() req: { user: { userId: string } }) {
+    const user = await this.userService.getProfile(req.user.userId);
     return {
-      user: {
-        userId: req.user.userId,
-        email: req.user.email,
-        fullName: req.user.fullName,
-        phone: req.user.phone,
-        role: req.user.role,
-        createdAt: req.user.createdAt,
-        updatedAt: req.user.updatedAt,
-      },
+      user,
       message: 'Lấy thông tin profile thành công',
     };
   }
