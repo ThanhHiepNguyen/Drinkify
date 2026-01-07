@@ -109,7 +109,6 @@ export class CategoryService {
               discountPercent: true,
               stockQuantity: true,
               unit: true,
-              sku: true,
               image: true,
               isActive: true,
               createdAt: true,
