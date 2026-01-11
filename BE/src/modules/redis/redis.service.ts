@@ -1,136 +1,70 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Inject,
+} from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
-    private client: Redis;
-    private readonly logger = new Logger(RedisService.name);
-    private isConnected = false;
+  constructor(@Inject('REDIS_CLIENT') private readonly redisClient: Redis) {}
 
-    constructor(private configService: ConfigService) {
-        const host = this.configService.get<string>('REDIS_HOST') || 'localhost';
-        const port = parseInt(this.configService.get<string>('REDIS_PORT') || '6379', 10);
-        const db = parseInt(this.configService.get<string>('REDIS_DB') || '0', 10);
-        const password = this.configService.get<string>('REDIS_PASSWORD');
+  onModuleInit() {
+    this.redisClient.on('error', (err) => {
+      console.error('Redis Client Error:', err);
+    });
 
-        this.client = new Redis({
-            host,
-            port,
-            db,
-            ...(password && { password }),
-            retryStrategy: (times) => {
-                const delay = Math.min(times * 50, 2000);
-                this.logger.warn(`Redis retry attempt ${times}, delay ${delay}ms`);
-                return delay;
-            },
-            maxRetriesPerRequest: 3,
-            enableReadyCheck: true,
-            lazyConnect: true,
-        });
-    }
+    this.redisClient.on('connect', () => {
+      console.log('Redis Client Connected');
+    });
+  }
 
-    async onModuleInit() {
-        this.client.on('connect', () => {
-            this.logger.log('Redis connecting...');
-        });
+  onModuleDestroy() {
+    this.redisClient.disconnect();
+  } // Hash operations
 
-        this.client.on('ready', () => {
-            this.isConnected = true;
-            this.logger.log('✅ Redis connected and ready');
-        });
+  async hgetall(key: string): Promise<Record<string, string>> {
+    return this.redisClient.hgetall(key);
+  }
 
-        this.client.on('error', (err) => {
-            this.isConnected = false;
-            this.logger.error(` Redis error: ${err.message}`, err.stack);
-        });
+  async hset(key: string, field: string, value: string): Promise<number> {
+    return this.redisClient.hset(key, field, value);
+  }
 
-        this.client.on('close', () => {
-            this.isConnected = false;
-            this.logger.warn('Redis connection closed');
-        });
+  async hget(key: string, field: string): Promise<string | null> {
+    return this.redisClient.hget(key, field);
+  }
 
-        this.client.on('reconnecting', () => {
-            this.logger.log('Redis reconnecting...');
-        });
+  async hdel(key: string, field: string): Promise<number> {
+    return this.redisClient.hdel(key, field);
+  }
 
-        // Kết nối Redis
-        try {
-            await this.client.connect();
-        } catch (error) {
-            this.logger.error(`Failed to connect to Redis: ${error.message}`);
-            // Không throw để app vẫn chạy được (fallback về DB)
-        }
-    }
+  async hexists(key: string, field: string): Promise<number> {
+    return this.redisClient.hexists(key, field);
+  }
 
-    async onModuleDestroy() {
-        if (this.client && this.isConnected) {
-            await this.client.quit();
-            this.logger.log('Redis connection closed');
-        }
-    }
+  async hincrby(
+    key: string,
+    field: string,
+    increment: number,
+  ): Promise<number> {
+    return this.redisClient.hincrby(key, field, increment);
+  } // Key operations
 
-    // Kiểm tra trạng thái kết nối
-    isReady(): boolean {
-        return this.isConnected && this.client?.status === 'ready';
-    }
+  async expire(key: string, seconds: number): Promise<number> {
+    return this.redisClient.expire(key, seconds);
+  }
 
-    // Hash operations
-    async hset(key: string, field: string, value: string | number): Promise<number> {
-        if (!this.isReady()) {
-            throw new Error('Redis is not connected');
-        }
-        return await this.client.hset(key, field, typeof value === 'number' ? value.toString() : value);
-    }
+  async del(key: string): Promise<number> {
+    return this.redisClient.del(key);
+  }
 
-    async hgetall(key: string): Promise<Record<string, string>> {
-        if (!this.isReady()) {
-            return {};
-        }
-        return await this.client.hgetall(key);
-    }
+  async exists(key: string): Promise<number> {
+    return this.redisClient.exists(key);
+  } // Get the raw Redis client for advanced operations
 
-    async hsetJSON(key: string, field: string, value: any): Promise<number> {
-        if (!this.isReady()) {
-            throw new Error('Redis is not connected');
-        }
-        return await this.client.hset(key, field, JSON.stringify(value));
-    }
-
-    async hdel(key: string, ...fields: string[]): Promise<number> {
-        if (!this.isReady()) {
-            throw new Error('Redis is not connected');
-        }
-        return await this.client.hdel(key, ...fields);
-    }
-
-    async hincrby(key: string, field: string, increment: number): Promise<number> {
-        if (!this.isReady()) {
-            throw new Error('Redis is not connected');
-        }
-        return await this.client.hincrby(key, field, increment);
-    }
-
-    async hexists(key: string, field: string): Promise<number> {
-        if (!this.isReady()) {
-            return 0;
-        }
-        return await this.client.hexists(key, field);
-    }
-
-    async expire(key: string, seconds: number): Promise<number> {
-        if (!this.isReady()) {
-            return 0;
-        }
-        return await this.client.expire(key, seconds);
-    }
-
-    // Key operations
-    async del(key: string): Promise<number> {
-        if (!this.isReady()) {
-            throw new Error('Redis is not connected');
-        }
-        return await this.client.del(key);
-    }
+  getClient(): Redis {
+    return this.redisClient;
+  }
 }
-

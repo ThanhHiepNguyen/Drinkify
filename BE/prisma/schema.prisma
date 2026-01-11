@@ -94,18 +94,16 @@ model ProductOption {
   optionId        String   @id @default(uuid())
   productId       String
 
-  size            String?  
-  material        String?  
+  size            String?
+  material        String?
   threadType      String?  
   headType        String?  
-
   price           Float
   salePrice       Float?
   discountPercent Float?
 
   stockQuantity   Int      @default(0)
   unit            String   @default("Cái") 
-
   image           String?
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())

@@ -197,6 +197,7 @@ export class ReviewService {
             select: {
                 reviewId: true,
                 userId: true,
+                rating: true,
             },
         });
 
@@ -207,6 +208,21 @@ export class ReviewService {
 
         if (userRole !== UserRole.ADMIN && review.userId !== userId) {
             throw new NotFoundException('Đánh giá không tồn tại');
+        }
+
+        if (data.rating !== undefined) {
+
+            if (review.rating === 5) {
+                throw new BadRequestException(
+                    'Không thể cập nhật đánh giá 5 sao. Bạn chỉ có thể cập nhật đánh giá thấp hơn 5 sao.',
+                );
+            }
+
+            if (data.rating < review.rating) {
+                throw new BadRequestException(
+                    `Không thể giảm đánh giá từ ${review.rating} sao xuống ${data.rating} sao. Bạn chỉ có thể tăng đánh giá.`,
+                );
+            }
         }
 
         const updatedReview = await this.prisma.review.update({
